@@ -266,7 +266,7 @@ comRehabEquity %>%
                           TRUE ~ 0)) %>% 
   summarise(n = n())
 
-# explore STP/ICB --
+# explore STP/ICB ----
 comRehabEquity %>% 
   filter(Der_Age_at_CDS_Activity_Date >= 65) %>% 
   filter(Der_Age_at_CDS_Activity_Date <= 110) %>% 
@@ -302,7 +302,7 @@ comRehabEquity %>%
   print(n = 43)
 # all good
 
-# explore spell LoS --
+# explore spell LoS ----
 comRehabEquity %>% 
   filter(Der_Age_at_CDS_Activity_Date >= 65) %>% 
   filter(Der_Age_at_CDS_Activity_Date <= 110) %>% 
