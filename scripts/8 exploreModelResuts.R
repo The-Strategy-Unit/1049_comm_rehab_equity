@@ -9,34 +9,171 @@ library(broom)
 library(mgcv)
 
 
-# 1 load model data, models and results ----
-modDf <- readRDS(here('dataRDS', 'modDf.RDS'))
+# 1 load model results ----
+# modDf <- readRDS(here('dataRDS', 'modDf.RDS'))
+# modPrelim <- readRDS(here('dataRDS', 'modPrelim.RDS'))
+# mod <- readRDS(here('dataRDS', 'mod.RDS'))
+# modSens1 <- readRDS(here('dataRDS', 'modSens1.RDS'))
+# modSens2 <- readRDS(here('dataRDS', 'modSens2.RDS'))
+# modDfSens3 <- readRDS(here('dataRDS', 'modDfSens3.RDS'))
+# modSens3 <- readRDS(here('dataRDS', 'modSens3.RDS'))
+# modDf_fracFemur <- readRDS(here('dataRDS', 'modDf_fracFemur.RDS'))
+# mod_fracFemur <- readRDS(here('dataRDS', 'mod_fracFemur.RDS'))
+# modDf_frailtyFemur <- readRDS(here('dataRDS', 'modDf_frailtyFemur.RDS'))
+# mod_frailtyFemur <- readRDS(here('dataRDS', 'mod_frailtyFemur.RDS'))
 
-modPrelim <- readRDS(here('dataRDS', 'modPrelim.RDS'))
 modPrelim_Results <- readRDS(here('dataRDS', 'modPrelim_Results.RDS'))
 
-mod <- readRDS(here('dataRDS', 'mod.RDS'))
 mod_Results <- readRDS(here('dataRDS', 'mod_Results.RDS'))
 
-modSens1 <- readRDS(here('dataRDS', 'modSens1.RDS'))
+modUnadj_Results <- readRDS(here('dataRDS', 'modUnadj_Results.RDS'))
 
-modSens2 <- readRDS(here('dataRDS', 'modSens2.RDS'))
+sens_Results <- saveRDS(here('dataRDS', 'sens_Results.RDS'))
 
-modDfSens3 <- readRDS(here('dataRDS', 'modDfSens3.RDS'))
-modSens3 <- readRDS(here('dataRDS', 'modSens3.RDS'))
-
-sens_Results <- saveRDS(, here('dataRDS', 'sens_Results.RDS'))
-
-
-modDf_fracFemur <- readRDS(here('dataRDS', 'modDf_fracFemur.RDS'))
-mod_fracFemur <- readRDS(here('dataRDS', 'mod_fracFemur.RDS'))
 mod_fracFemur_Results <- readRDS(here('dataRDS', 'mod_fracFemur_Results.RDS'))
 
-
-modDf_frailtyFemur <- readRDS(here('dataRDS', 'modDf_frailtyFemur.RDS'))
-mod_frailtyFemur <- readRDS(here('dataRDS', 'mod_frailtyFemur.RDS'))
 mod_frailtyFemur_Results <- readRDS(here('dataRDS', 'mod_frailtyFemur_Results.RDS'))
 
+
+
+
+# tables for mod results
+# adj and unadj for deprivation, sex and ethnicity
+table2a <- mod_Results %>% 
+  filter(substr(term, 1, 3) %in% c('imd', 'sex', 'eth')) %>% 
+  select(-statistic) %>% 
+  left_join(modUnadj_Results %>% 
+              select(term, 
+                   estimateUnadj = estimate, 
+                   std.errorUnadj = std.error,
+                   p.valueUnadj = p.value),
+            by = 'term') %>% 
+  bind_rows(data.frame(term = c('imdQF1 - most deprived (ref)', 'sexMfmale (ref)', 'ethnicityWhite - British (ref)' ),
+                       estimate = rep(0, 3),
+                       std.error = rep(NA_real_, 3),
+                       p.value = rep(NA_real_, 3),
+                       estimateUnadj = rep(0, 3),
+                       std.errorUnadj = rep(NA_real_, 3),
+                       p.valueUnadj = rep(NA_real_, 3))) %>%  
+  mutate(or_adj = exp(estimate),
+         lcl95_adj = exp(estimate - 1.96*std.error),
+         ucl95_adj = exp(estimate + 1.96*std.error),
+         or_unadj = exp(estimateUnadj),
+         lcl95_unadj = exp(estimateUnadj - 1.96*std.errorUnadj),
+         ucl95_unadj = exp(estimateUnadj + 1.96*std.errorUnadj)) %>% 
+  mutate(termGrp = case_when(substr(term, 1, 3) == 'imd' ~ 'IMD',
+                             substr(term, 1, 3) == 'sex' ~ 'Sex',
+                             substr(term, 1, 3) == 'eth' ~ 'Ethnicity',
+                             TRUE ~ 'check')) %>% 
+  mutate(termGrp = factor(termGrp, levels = c('IMD', 'Sex', 'Ethnicity'))) %>% 
+  mutate(termLabel = case_when(substr(term, 1, 3) == 'imd' ~ substr(term, 6, nchar(term)),
+                               substr(term, 1, 3) == 'sex' ~ substr(term, 6, nchar(term)),
+                               substr(term, 1, 3) == 'eth' ~ substr(term, 10, nchar(term)),
+                               TRUE ~ 'check')) %>% 
+  mutate(termLabel = factor(termLabel, 
+                               levels = c('1 - most deprived (ref)', '2', '3', '4', '5',
+                                          'male (ref)', 'female',
+                                          'White - British (ref)', 'White - Irish', 'White - other groups', 'Asian - Indian', 'Asian - Pakistani',
+                                          'Asian - Bangladeshi', 'Asian - other groups', 'Black - Caribbean', 'Black - African', 'Black - other groups',
+                                          'Mixed - White & Black Caribbean', 'Mixed - White & Black African', 'Mixed - White & Asian', 'Mixed - other groups', 'Chinese',
+                                          'Other groups', 'Not stated / known'))) %>% 
+  select(termGrp, term, termLabel, 
+         or_unadj, lcl95_unadj, ucl95_unadj, p.valueUnadj, 
+         or_adj, lcl95_adj, ucl95_adj, p.value) %>% 
+  arrange(termGrp, termLabel)
+  
+
+write.csv(table2a, here('tables', 'table2a.csv'))
+
+
+# adj and unadj for icb
+table2b <- mod_Results %>% 
+  filter(substr(term, 1, 3) %in% c('icb')) %>% 
+  select(-statistic) %>% 
+  left_join(modUnadj_Results %>% 
+              select(term, 
+                     estimateUnadj = estimate, 
+                     std.errorUnadj = std.error,
+                     p.valueUnadj = p.value),
+            by = 'term') %>% 
+  bind_rows(data.frame(term = c('icbShortNameCambridgeshire & Peterborough (ref)'),
+                       estimate = rep(0, 1),
+                       std.error = rep(NA_real_, 1),
+                       p.value = rep(NA_real_, 1),
+                       estimateUnadj = rep(0, 1),
+                       std.errorUnadj = rep(NA_real_, 1),
+                       p.valueUnadj = rep(NA_real_, 1))) %>%  
+  mutate(or_adj = exp(estimate),
+         lcl95_adj = exp(estimate - 1.96*std.error),
+         ucl95_adj = exp(estimate + 1.96*std.error),
+         or_unadj = exp(estimateUnadj),
+         lcl95_unadj = exp(estimateUnadj - 1.96*std.errorUnadj),
+         ucl95_unadj = exp(estimateUnadj + 1.96*std.errorUnadj)) %>% 
+  mutate(termGrp = case_when(substr(term, 1, 3) == 'icb' ~ 'ICB',
+                             TRUE ~ 'check')) %>% 
+  mutate(termGrp = factor(termGrp, levels = c('ICB'))) %>% 
+  mutate(termLabel = case_when(substr(term, 1, 3) == 'icb' ~ substr(term, 13, nchar(term)),
+                               TRUE ~ 'check')) %>% 
+  mutate(termLabel = factor(termLabel, 
+                            levels = c('Cambridgeshire & Peterborough (ref)', 'Bath, NE Somerset, Swindon & Wiltshire', 'Bedfordshire, Luton & Milton Keynes', 'Birmingham & Solihul', 'Black Country',
+                                       'Bristol, N Somerset, Swindon & S Gloucestershire', 'Buckinghamshire, Oxfordshire &  W Berkshire', 'Cheshire & Merseyside', 'Cornwall & Isles of Scilly', 'Coventry & Warwickshire',
+                                       'Derby & Derbyshire', 'Devon', 'Frimley', 'Gloucestershire', 'Greater Manchester',
+                                       'Hampshire & Isle of Wight', 'Herefordshire & Worcestershire', 'Hertfordshire & W Essex', 'Humber & N Yorkshire', 'Kent & Medway',
+                                       'Lancashire & S Cumbria', 'Leicester, Leicestershire & Rutland', 'Lincolnshire', 'Mid & S Essex', 'N Central London',
+                                       'NE & N Cumbria', 'NE London', 'Norfolk & Waveney', 'Northamptonshire', 'Nottingham & Nottinghamshire',
+                                       'NW London', 'SE London', 'Shropshire, Telford & Wrekin', 'Somerset', 'South Yorkshire',
+                                       'Staffordshire & Stoke-on-Trent', 'Suffolk & NE Essex', 'Surrey Heartlands', 'Sussex', 'SW London', 
+                                       'W Yorkshire'))) %>% 
+  select(termGrp, term, termLabel, 
+         or_unadj, lcl95_unadj, ucl95_unadj, p.valueUnadj, 
+         or_adj, lcl95_adj, ucl95_adj, p.value) %>% 
+  arrange(termGrp, termLabel)
+
+write.csv(table2b, here('tables', 'table2b.csv'))
+
+
+
+# adj and unadj for pod
+table2c <- mod_Results %>% 
+  filter(substr(term, 1, 3) %in% c('pod')) %>% 
+  select(-statistic) %>% 
+  left_join(modUnadj_Results %>% 
+              select(term, 
+                     estimateUnadj = estimate, 
+                     std.errorUnadj = std.error,
+                     p.valueUnadj = p.value),
+            by = 'term') %>% 
+  bind_rows(data.frame(term = c('podGrpnon-elective (ref)'),
+                       estimate = rep(0, 1),
+                       std.error = rep(NA_real_, 1),
+                       p.value = rep(NA_real_, 1),
+                       estimateUnadj = rep(0, 1),
+                       std.errorUnadj = rep(NA_real_, 1),
+                       p.valueUnadj = rep(NA_real_, 1))) %>%  
+  mutate(or_adj = exp(estimate),
+         lcl95_adj = exp(estimate - 1.96*std.error),
+         ucl95_adj = exp(estimate + 1.96*std.error),
+         or_unadj = exp(estimateUnadj),
+         lcl95_unadj = exp(estimateUnadj - 1.96*std.errorUnadj),
+         ucl95_unadj = exp(estimateUnadj + 1.96*std.errorUnadj)) %>% 
+  mutate(termGrp = case_when(substr(term, 1, 3) == 'pod' ~ 'Admission method',
+                             TRUE ~ 'check')) %>% 
+  mutate(termGrp = factor(termGrp, levels = c('Admission method'))) %>% 
+  mutate(termLabel = case_when(substr(term, 1, 3) == 'pod' ~ substr(term, 7, nchar(term)),
+                               TRUE ~ 'check')) %>% 
+  mutate(termLabel = factor(termLabel, 
+                            levels = c('non-elective (ref)', 'elective'))) %>% 
+  select(termGrp, term, termLabel, 
+         or_unadj, lcl95_unadj, ucl95_unadj, p.valueUnadj, 
+         or_adj, lcl95_adj, ucl95_adj, p.value) %>% 
+  arrange(termGrp, termLabel)
+
+write.csv(table2c, here('tables', 'table2c.csv'))
+
+# adj and unadj for specialty
+###########################
+###########################
+###########################
 
 # 2 chart preliminary model results ----
 

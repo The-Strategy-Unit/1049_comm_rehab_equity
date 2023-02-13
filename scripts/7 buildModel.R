@@ -13,10 +13,95 @@ library(mgcv)
 modDf <- readRDS(here('dataRDS', 'modDf.RDS'))
 
 
-# 2 build unadjusted models ----
+# 2 build unadjusted (univariate) models ----
+modUnadjImdQF <- glm(postCommContactAttF2FYN ~ imdQF,
+                 data = modDf,
+                 family = binomial(link = "logit"))
 
-  
-# 3 build preliminary model - using grouped variables ----  
+modUnadjSexMf <- glm(postCommContactAttF2FYN ~ sexMf,
+               data = modDf,
+               family = binomial(link = "logit"))
+
+modUnadjEthnicity <- glm(postCommContactAttF2FYN ~ ethnicity,
+               data = modDf,
+               family = binomial(link = "logit"))
+
+modUnadjIcbShortName <- glm(postCommContactAttF2FYN ~ icbShortName,
+                   data = modDf,
+                   family = binomial(link = "logit"))
+
+modUnadjAgeGrp <- glm(postCommContactAttF2FYN ~ ageGrp,
+                      data = modDf,
+                      family = binomial(link = "logit"))
+
+modUnadjLoSGrp <- glm(postCommContactAttF2FYN ~ loSGrp,
+                   data = modDf,
+                   family = binomial(link = "logit"))
+
+modUnadjCciGrp <- glm(postCommContactAttF2FYN ~ cciGrp,
+                   data = modDf,
+                   family = binomial(link = "logit"))
+
+modUnadjSpecGrp <- glm(postCommContactAttF2FYN ~ specGrp,
+                data = modDf,
+                family = binomial(link = "logit"))
+
+modUnadjPodGrp <- glm(postCommContactAttF2FYN ~ podGrp,
+                data = modDf,
+                family = binomial(link = "logit"))
+
+modUnadjPriorCommContactAttF2FGrp <- glm(postCommContactAttF2FYN ~ priorCommContactAttF2FGrp,
+                data = modDf,
+                family = binomial(link = "logit"))
+
+saveRDS(modUnadjImdQF, here('dataRDS', 'modUnadjImdQF.RDS'))
+saveRDS(modUnadjSexMf, here('dataRDS', 'modUnadjSexMf.RDS'))
+saveRDS(modUnadjEthnicity, here('dataRDS', 'modUnadjEthnicity.RDS'))
+saveRDS(modUnadjIcbShortName, here('dataRDS', 'modUnadjIcbShortName.RDS'))
+saveRDS(modUnadjAgeGrp, here('dataRDS', 'modUnadjAgeGrp.RDS'))
+saveRDS(modUnadjLoSGrp, here('dataRDS', 'modUnadjLoSGrp.RDS'))
+saveRDS(modUnadjCciGrp, here('dataRDS', 'modUnadjCciGrp.RDS'))
+saveRDS(modUnadjSpecGrp, here('dataRDS', 'modUnadjSpecGrp.RDS'))
+saveRDS(modUnadjPodGrp, here('dataRDS', 'modUnadjPodGrp.RDS'))
+saveRDS(modUnadjPriorCommContactAttF2FGrp, here('dataRDS', 'modUnadjPriorCommContactAttF2FGrp.RDS'))
+
+# now with gams for age, los cci, prior comm contacts
+
+modUnadjAgeGrpGam <- bam(postCommContactAttF2FYN ~ s(Der_Age_at_CDS_Activity_Date, bs = 'cr'),
+                        data = modDf,
+                        family = binomial(link = "logit"))
+
+modUnadjLoSGrpGam <- bam(postCommContactAttF2FYN ~ s(der_spell_LoS, bs = 'cr'),
+                        data = modDf,
+                        family = binomial(link = "logit"))
+
+modUnadjCciGrpGam <- bam(postCommContactAttF2FYN ~ s(cci, bs = 'cr'),
+                       data = modDf,
+                       family = binomial(link = "logit"))
+
+modUnadjPriorCommContactAttF2FGrpGam <- bam(postCommContactAttF2FYN ~ s(priorCommContactsAttF2F, bs = 'cr'),
+                                          data = modDf,
+                                          family = binomial(link = "logit"))
+
+saveRDS(modUnadjAgeGrpGam, here('dataRDS', 'modUnadjAgeGrpGam.RDS'))
+saveRDS(modUnadjLoSGrpGam, here('dataRDS', 'modUnadjLoSGrpGam.RDS'))
+saveRDS(modUnadjCciGrpGam, here('dataRDS', 'modUnadjCciGrpGam.RDS'))
+saveRDS(modUnadjPriorCommContactAttF2FGrpGam, here('dataRDS', 'modUnadjPriorCommContactAttF2FGrpGam.RDS'))
+
+modUnadj_Results <-  
+  tidy(modUnadjImdQF, exponentiate = FALSE) %>% 
+  bind_rows(tidy(modUnadjSexMf, exponentiate = FALSE)) %>% 
+  bind_rows(tidy(modUnadjEthnicity, exponentiate = FALSE)) %>% 
+  bind_rows(tidy(modUnadjIcbShortName, exponentiate = FALSE)) %>% 
+  bind_rows(tidy(modUnadjSpecGrp, exponentiate = FALSE)) %>% 
+  bind_rows(tidy(modUnadjPodGrp, exponentiate = FALSE)) %>% 
+  filter(term != '(Intercept)')
+
+saveRDS(modUnadj_Results, here('dataRDS', 'modUnadj_Results.RDS'))
+
+
+
+# 3 build preliminary adjusted (multivariable) model - using grouped variables ----  
 modPrelim <- glm(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicity + icbShortName + 
              ageGrp + loSGrp + cciGrp + specGrp + podGrp + priorCommContactAttF2FGrp,
            data = modDf,
@@ -30,7 +115,7 @@ saveRDS(modPrelim_Results, here('dataRDS', 'modPrelim_Results.RDS'))
 
 
 
-# 4 build final model with gam terms for age, cci, prior comm contacts ----
+# 4 build final adjusted (multivariable) model with gam terms for age, los, cci, prior comm contacts ----
 # bam used in place of gam because dataset large
 mod <- bam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicity + icbShortName + 
              specGrp + podGrp + 
