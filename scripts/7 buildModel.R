@@ -255,6 +255,15 @@ modDf_fracFemur <- modDf %>%
   filter(grepl('S72', der_diagnosis_all)) %>% 
   filter(podGrp == 'nonElective')
 
+modDf_fracFemur %>% 
+  summarise(n = n(),
+            p = n() / 938581)
+
+modDf_fracFemur %>% 
+  group_by(postCommContactAttF2FYN) %>% 
+  summarise(n = n()) %>% 
+  mutate(p = n / sum(n))
+
 saveRDS(modDf_fracFemur, here('dataRDS', 'modDf_fracFemur.RDS'))
 
 mod_fracFemur <- gam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicityGrp + 
@@ -264,6 +273,8 @@ mod_fracFemur <- gam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicityGrp +
              s(priorCommContactsAttF2F, bs = 'cr'),
            data = modDf_fracFemur,
            family = binomial(link = "logit"))
+
+
 
 saveRDS(mod_fracFemur, here('dataRDS', 'mod_fracFemur.RDS'))
 
@@ -398,6 +409,15 @@ modDf_frailty <- modDf %>%
 
 
 saveRDS(modDf_frailty, here('dataRDS', 'modDf_frailty.RDS'))
+
+modDf_frailty %>% 
+  summarise(n = n(),
+            p = n() / 938581)
+
+modDf_frailty %>% 
+  group_by(postCommContactAttF2FYN) %>% 
+  summarise(n = n()) %>% 
+  mutate(p = n / sum(n))
 
 mod_frailty <- gam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicityGrp + 
                        s(Der_Age_at_CDS_Activity_Date, bs = 'cr') + 
