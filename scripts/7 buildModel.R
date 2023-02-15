@@ -283,6 +283,7 @@ mod_fracFemur_Results <- tidy(mod_fracFemur, exponentiate = FALSE, parametric = 
 saveRDS(mod_fracFemur_Results, here('dataRDS', 'mod_fracFemur_Results.RDS'))
 
 
+
 # frailty
 # define as frailty score >  15, using method described by 
 # Gilbert et al, 2018 (https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(18)30668-8/fulltext)
