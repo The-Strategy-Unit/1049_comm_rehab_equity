@@ -1,7 +1,7 @@
 # 1049_comm_rehab_equity
-Exploring equity of access to community services after hospital discharge
+Exploring equity of access to community services after hospital discharge.
 
-Following a stay in hospital, many patients, particularly older adults, require support at home from a healthcare professional such as a district nurse, an occupational therapist, or a physiotherapist.  This report explores the extent to which these post-discharge community healthcare services are equitably distributed.  It addresses this question over four potential axes of inequality: socio-economic group, ethnicity, sex, and geography.  
+Following a stay in hospital, many patients, particularly older adults, require support at home from a healthcare professional such as a district nurse, an occupational therapist, or a physiotherapist.  This analysis explores the extent to which these post-discharge community healthcare services are equitably distributed.  It addresses this question over four potential axes of inequality: socio-economic group, ethnicity, sex, and geography.  
 
 The analysis uses four datasets:
   1. The Community Services Data Set (access via NCDR)
