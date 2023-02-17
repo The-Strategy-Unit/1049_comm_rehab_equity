@@ -12,13 +12,21 @@ The analysis uses four datasets:
 The analysis consiste of a series TSQL and R scripts whoch must be run in the following order.
 
  A  extract_data_for_model.tsql 
+ 
  B  1 drawDownCommRehanData.R
+ 
     2 exploreData.R
+    
     3 mapDataCoverage.R
+    
     4 createModelDataFrame.R
+    
     5 descrivbeStudyPopulation.R
+    
     6 drescribeoUtcomeFrequency.R
+    
     7 builModel.R
+    
     8 exploreModelResults.R
     
 The R scruipts require a number of packages inclusding tidyverse, here, broom, odbc. mgcv, stringr, lubridate, scales, maptools, rgdal, greos, ggpubr.
