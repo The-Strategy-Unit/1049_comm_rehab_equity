@@ -171,7 +171,10 @@ modDfSens3 <- modDf %>%
   filter(STP21CD != 'E54000053') %>% # Sussex
   filter(STP21CD != 'E54000039') %>% # Bristol, NS & SG
   filter(STP21CD != 'E54000037')     # Devon
-  
+ 
+modDfSens3 %>% 
+  summarise(n = n())
+ 
 
 modSens3 <- bam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicity + icbShortName + 
              specGrp + podGrp + 

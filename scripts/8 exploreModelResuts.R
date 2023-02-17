@@ -836,6 +836,16 @@ ggsave(here('charts', 'plotSensICBORs.jpg'),
        dpi = 300)
 
 
+
+
+sens_Results %>% 
+  filter(termGrp == 'ICB') %>% 
+  group_by(mod) %>% 
+  summarise(minOr = min(or),
+            maxOr = max(or),
+            n= n())
+
+
 # 6 create charts for subgroup analysis----
 # fractured femur
 
