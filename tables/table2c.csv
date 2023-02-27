@@ -1,3 +1,0 @@
-"","termGrp","term","termLabel","or_unadj","lcl95_unadj","ucl95_unadj","p.valueUnadj","or_adj","lcl95_adj","ucl95_adj","p.value"
-"1","Admission method","podGrpnon-elective (ref)","non-elective (ref)",1,NA,NA,NA,1,NA,NA,NA
-"2","Admission method","podGrpelective","elective",0.256634549305674,0.253968250357073,0.259328840533126,0,0.754403989564678,0.739102891517703,0.770021854876576,4.66758425989478e-160
