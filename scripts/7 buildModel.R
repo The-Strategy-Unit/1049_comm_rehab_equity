@@ -9,6 +9,8 @@ library(broom)
 library(mgcv)
 
 
+# (A) models for NHSE paper ----
+
 # 1 load model data frame ----
 modDf <- readRDS(here('dataRDS', 'modDf.RDS'))
 
@@ -438,3 +440,263 @@ mod_frailty_Results <- tidy(mod_frailty, exponentiate = FALSE, parametric = TRUE
 saveRDS(mod_frailty_Results, here('dataRDS', 'mod_frailty_Results.RDS'))
 
 
+
+
+# (B) models for manuscript ----
+
+# relevel imdQ so that least deprived is reference category
+modDf_manuscript <- readRDS(here('dataRDS', 'modDf.RDS')) |> 
+  mutate(imdQF = factor(imdQF, levels = c('5', '4', '3', '2', '1')))
+
+saveRDS(modDf_manuscript, here('dataRDS', 'modDf_manuscript.RDS'))
+# modDf_manuscript <- readRDS(here('dataRDS', 'modDf_manuscript.RDS'))
+
+
+# 1 main model ----
+mod_manuscript <- bam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicity + icbShortName + 
+             specGrp + podGrp + 
+             s(Der_Age_at_CDS_Activity_Date, bs = 'cr') + 
+             s(der_spell_LoS, bs = 'cr') + 
+             s(cci, bs = 'cr') + 
+             s(priorCommContactsAttF2F, bs = 'cr'),
+           data = modDf_manuscript,
+           family = binomial(link = "logit"))
+
+saveRDS(mod_manuscript, here('dataRDS', 'mod_manuscript.RDS'))
+
+mod_Results_manuscript <- tidy(mod_manuscript, exponentiate = FALSE, parametric = TRUE) 
+
+saveRDS(mod_Results_manuscript, here('dataRDS', 'mod_Results_manuscript.RDS'))
+
+
+# 2 main model with grouped-up ethnicity level ----
+mod_ethGrpd_manuscript <- bam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicityGrp + icbShortName + 
+                        specGrp + podGrp + 
+                        s(Der_Age_at_CDS_Activity_Date, bs = 'cr') + 
+                        s(der_spell_LoS, bs = 'cr') + 
+                        s(cci, bs = 'cr') + 
+                        s(priorCommContactsAttF2F, bs = 'cr'),
+                      data = modDf_manuscript,
+                      family = binomial(link = "logit"))
+
+saveRDS(mod_ethGrpd_manuscript, here('dataRDS', 'mod_ethGrpd_manuscript.RDS'))
+
+mod_ethGrpd_Results_manuscript <- tidy(mod_ethGrpd_manuscript, exponentiate = FALSE, parametric = TRUE) 
+
+saveRDS(mod_ethGrpd_Results_manuscript, here('dataRDS', 'mod_ethGrpd_Results_manuscript.RDS'))
+
+
+# 3 sensitivity analysis ----
+
+# sens1 - all atts (not just f2f)
+modSens1_manuscript <- bam(postCommContactAttYN ~ imdQF +  sexMf + ethnicity + icbShortName + 
+                  specGrp + podGrp + 
+                  s(Der_Age_at_CDS_Activity_Date, bs = 'cr') + 
+                  s(der_spell_LoS, bs = 'cr') + 
+                  s(cci, bs = 'cr') + 
+                  s(priorCommContactsAtt, bs = 'cr'),
+                data = modDf_manuscript,
+                family = binomial(link = "logit"))
+
+saveRDS(modSens1_manuscript, here('dataRDS', 'modSens1_manuscript.RDS'))
+
+
+# sens2 - all apps whether attended or not
+modSens2_manuscript <- bam(postCommContactAppYN ~ imdQF +  sexMf + ethnicity + icbShortName + 
+                  specGrp + podGrp + 
+                  s(Der_Age_at_CDS_Activity_Date, bs = 'cr') + 
+                  s(der_spell_LoS, bs = 'cr') + 
+                  s(cci, bs = 'cr') + 
+                  s(priorCommContactsApp, bs = 'cr'),
+                data = modDf_manuscript,
+                family = binomial(link = "logit"))
+
+saveRDS(modSens2_manuscript, here('dataRDS', 'modSens2_manuscript.RDS'))
+
+
+
+# 4 subgroup analysis----
+
+# fractured femur
+
+modDf_fracFemur_manuscript <- modDf_manuscript %>% 
+  filter(grepl('S72', der_diagnosis_all)) %>% 
+  filter(podGrp == 'nonElective')
+
+modDf_fracFemur_manuscript %>% 
+  summarise(n = n(),
+            p = n() / 938581)
+
+modDf_fracFemur_manuscript %>% 
+  group_by(postCommContactAttF2FYN) %>% 
+  summarise(n = n()) %>% 
+  mutate(p = n / sum(n))
+
+saveRDS(modDf_fracFemur_manuscript, here('dataRDS', 'modDf_fracFemur_manuscript.RDS'))
+
+mod_fracFemur_manuscript <- gam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicityGrp + 
+                       s(Der_Age_at_CDS_Activity_Date, bs = 'cr') + 
+                       s(der_spell_LoS, bs = 'cr') + 
+                       s(cci, bs = 'cr') + 
+                       s(priorCommContactsAttF2F, bs = 'cr'),
+                     data = modDf_fracFemur_manuscript,
+                     family = binomial(link = "logit"))
+
+
+
+saveRDS(mod_fracFemur_manuscript, here('dataRDS', 'mod_fracFemur_manuscript.RDS'))
+
+mod_fracFemur_Results_manuscript <- tidy(mod_fracFemur_manuscript, exponentiate = FALSE, parametric = TRUE) 
+
+saveRDS(mod_fracFemur_Results_manuscript, here('dataRDS', 'mod_fracFemur_Results_manuscript.RDS'))
+
+
+
+
+# frailty
+# define as frailty score >  15, using method described by 
+# Gilbert et al, 2018 (https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(18)30668-8/fulltext)
+
+modDf_frailty_manuscript <- modDf_manuscript %>% 
+  filter(podGrp == 'nonElective') %>% 
+  filter(Der_Age_at_CDS_Activity_Date >= 75) %>% 
+  mutate(frailtyScore = ifelse(grepl('F00', der_diagnosis_all), 7.1, 0) +
+           ifelse(grepl('G81', der_diagnosis_all), 4.4, 0) +
+           ifelse(grepl('G30', der_diagnosis_all), 4.0, 0) +
+           ifelse(grepl('I69', der_diagnosis_all), 3.7, 0) +
+           ifelse(grepl('R29', der_diagnosis_all), 3.6, 0) +
+           ifelse(grepl('N39', der_diagnosis_all), 3.2, 0) +
+           ifelse(grepl('F05', der_diagnosis_all), 3.2, 0) +
+           ifelse(grepl('W19', der_diagnosis_all), 3.2, 0) +
+           ifelse(grepl('S00', der_diagnosis_all), 3.2, 0) +
+           ifelse(grepl('R31', der_diagnosis_all), 3.0, 0) +
+           ifelse(grepl('B86', der_diagnosis_all), 2.9, 0) +
+           ifelse(grepl('R41', der_diagnosis_all), 2.7, 0) +
+           ifelse(grepl('R26', der_diagnosis_all), 2.6, 0) +
+           ifelse(grepl('I67', der_diagnosis_all), 2.6, 0) +
+           ifelse(grepl('R56', der_diagnosis_all), 2.6, 0) +
+           ifelse(grepl('R40', der_diagnosis_all), 2.5, 0) +
+           ifelse(grepl('T83', der_diagnosis_all), 2.4, 0) +
+           ifelse(grepl('S06', der_diagnosis_all), 2.4, 0) +
+           
+           ifelse(grepl('S42', der_diagnosis_all), 2.3, 0) +
+           ifelse(grepl('E87', der_diagnosis_all), 2.3, 0) +
+           ifelse(grepl('M25', der_diagnosis_all), 2.3, 0) +
+           ifelse(grepl('E86', der_diagnosis_all), 2.3, 0) +
+           ifelse(grepl('R54', der_diagnosis_all), 2.2, 0) +
+           ifelse(grepl('Z50', der_diagnosis_all), 2.1, 0) +
+           ifelse(grepl('F03', der_diagnosis_all), 2.1, 0) +
+           ifelse(grepl('W18', der_diagnosis_all), 2.1, 0) +
+           ifelse(grepl('Z75', der_diagnosis_all), 2.0, 0) +
+           ifelse(grepl('F01', der_diagnosis_all), 2.0, 0) +
+           ifelse(grepl('S80', der_diagnosis_all), 2.0, 0) +
+           ifelse(grepl('L03', der_diagnosis_all), 2.0, 0) +
+           ifelse(grepl('H54', der_diagnosis_all), 1.9, 0) +
+           ifelse(grepl('E53', der_diagnosis_all), 1.9, 0) +
+           ifelse(grepl('Z60', der_diagnosis_all), 1.8, 0) +
+           ifelse(grepl('G20', der_diagnosis_all), 1.8, 0) +
+           ifelse(grepl('R55', der_diagnosis_all), 1.8, 0) +
+           ifelse(grepl('S22', der_diagnosis_all), 1.8, 0) +
+           ifelse(grepl('K59', der_diagnosis_all), 1.8, 0) +
+           ifelse(grepl('N17', der_diagnosis_all), 1.8, 0) +
+           ifelse(grepl('L89', der_diagnosis_all), 1.7, 0) +
+           ifelse(grepl('Z22', der_diagnosis_all), 1.7, 0) +
+           ifelse(grepl('B95', der_diagnosis_all), 1.7, 0) +
+           ifelse(grepl('L97', der_diagnosis_all), 1.6, 0) +
+           ifelse(grepl('R44', der_diagnosis_all), 1.6, 0) +
+           ifelse(grepl('K26', der_diagnosis_all), 1.6, 0) +
+           ifelse(grepl('I95', der_diagnosis_all), 1.6, 0) +
+           
+           ifelse(grepl('N19', der_diagnosis_all), 1.6, 0) +
+           ifelse(grepl('A41', der_diagnosis_all), 1.6, 0) +
+           ifelse(grepl('Z87', der_diagnosis_all), 1.5, 0) +
+           ifelse(grepl('J96', der_diagnosis_all), 1.5, 0) +
+           ifelse(grepl('X59', der_diagnosis_all), 1.5, 0) +
+           ifelse(grepl('M19', der_diagnosis_all), 1.5, 0) +
+           ifelse(grepl('G40', der_diagnosis_all), 1.5, 0) +
+           ifelse(grepl('M81', der_diagnosis_all), 1.4, 0) +
+           ifelse(grepl('S72', der_diagnosis_all), 1.4, 0) +
+           ifelse(grepl('S32', der_diagnosis_all), 1.4, 0) +
+           ifelse(grepl('E16', der_diagnosis_all), 1.4, 0) +
+           ifelse(grepl('R94', der_diagnosis_all), 1.4, 0) +
+           ifelse(grepl('N18', der_diagnosis_all), 1.4, 0) +
+           ifelse(grepl('R33', der_diagnosis_all), 1.3, 0) +
+           ifelse(grepl('R69', der_diagnosis_all), 1.3, 0) +
+           ifelse(grepl('N28', der_diagnosis_all), 1.3, 0) +
+           ifelse(grepl('R32', der_diagnosis_all), 1.2, 0) +
+           ifelse(grepl('G31', der_diagnosis_all), 1.2, 0) +
+           ifelse(grepl('Y95', der_diagnosis_all), 1.2, 0) +
+           ifelse(grepl('S09', der_diagnosis_all), 1.2, 0) +
+           ifelse(grepl('R45', der_diagnosis_all), 1.2, 0) +
+           ifelse(grepl('G45', der_diagnosis_all), 1.2, 0) +
+           ifelse(grepl('Z74', der_diagnosis_all), 1.1, 0) +
+           ifelse(grepl('M79', der_diagnosis_all), 1.1, 0) +
+           ifelse(grepl('W06', der_diagnosis_all), 1.1, 0) +
+           
+           ifelse(grepl('S01', der_diagnosis_all), 1.1, 0) +
+           ifelse(grepl('A04', der_diagnosis_all), 1.1, 0) +
+           ifelse(grepl('A09', der_diagnosis_all), 1.1, 0) +
+           ifelse(grepl('J18', der_diagnosis_all), 1.1, 0) +
+           ifelse(grepl('J69', der_diagnosis_all), 1.0, 0) +
+           ifelse(grepl('R47', der_diagnosis_all), 1.0, 0) +
+           ifelse(grepl('E55', der_diagnosis_all), 1.0, 0) +
+           ifelse(grepl('Z93', der_diagnosis_all), 1.0, 0) +
+           ifelse(grepl('R02', der_diagnosis_all), 1.0, 0) +
+           ifelse(grepl('R63', der_diagnosis_all), 0.9, 0) +
+           ifelse(grepl('H91', der_diagnosis_all), 0.9, 0) +
+           ifelse(grepl('W10', der_diagnosis_all), 0.9, 0) +
+           ifelse(grepl('W01', der_diagnosis_all), 0.9, 0) +
+           ifelse(grepl('E05', der_diagnosis_all), 0.9, 0) +
+           ifelse(grepl('M41', der_diagnosis_all), 0.9, 0) +
+           ifelse(grepl('R13', der_diagnosis_all), 0.8, 0) +
+           ifelse(grepl('Z99', der_diagnosis_all), 0.8, 0) +
+           ifelse(grepl('U80', der_diagnosis_all), 0.8, 0) +
+           ifelse(grepl('M80', der_diagnosis_all), 0.8, 0) +
+           ifelse(grepl('K92', der_diagnosis_all), 0.8, 0) +
+           ifelse(grepl('I63', der_diagnosis_all), 0.8, 0) +
+           ifelse(grepl('N20', der_diagnosis_all), 0.7, 0) +
+           ifelse(grepl('F10', der_diagnosis_all), 0.7, 0) +
+           ifelse(grepl('Y84', der_diagnosis_all), 0.7, 0) +
+           ifelse(grepl('R00', der_diagnosis_all), 0.7, 0) +
+           
+           ifelse(grepl('J22', der_diagnosis_all), 0.7, 0) +
+           ifelse(grepl('Z73', der_diagnosis_all), 0.6, 0) +
+           ifelse(grepl('R79', der_diagnosis_all), 0.6, 0) +
+           ifelse(grepl('Z91', der_diagnosis_all), 0.5, 0) +
+           ifelse(grepl('S51', der_diagnosis_all), 0.5, 0) +
+           ifelse(grepl('F32', der_diagnosis_all), 0.5, 0) +
+           ifelse(grepl('M48', der_diagnosis_all), 0.5, 0) +
+           ifelse(grepl('E83', der_diagnosis_all), 0.4, 0) +
+           ifelse(grepl('M15', der_diagnosis_all), 0.4, 0) +
+           ifelse(grepl('D64', der_diagnosis_all), 0.4, 0) +
+           ifelse(grepl('L08', der_diagnosis_all), 0.4, 0) +
+           ifelse(grepl('R11', der_diagnosis_all), 0.3, 0) +
+           ifelse(grepl('K52', der_diagnosis_all), 0.3, 0) +
+           ifelse(grepl('R50', der_diagnosis_all), 0.1, 0)) %>% 
+  filter(frailtyScore > 15)
+
+
+saveRDS(modDf_frailty_manuscript, here('dataRDS', 'modDf_frailty_manuscript.RDS'))
+
+modDf_frailty_manuscript %>% 
+  summarise(n = n(),
+            p = n() / 938581)
+
+modDf_frailty_manuscript %>% 
+  group_by(postCommContactAttF2FYN) %>% 
+  summarise(n = n()) %>% 
+  mutate(p = n / sum(n))
+
+mod_frailty_manuscript <- gam(postCommContactAttF2FYN ~ imdQF +  sexMf + ethnicityGrp + 
+                     s(Der_Age_at_CDS_Activity_Date, bs = 'cr') + 
+                     s(der_spell_LoS, bs = 'cr') + 
+                     s(cci, bs = 'cr') + 
+                     s(priorCommContactsAttF2F, bs = 'cr'),
+                   data = modDf_frailty_manuscript,
+                   family = binomial(link = "logit"))
+
+saveRDS(mod_frailty_manuscript, here('dataRDS', 'mod_frailty_manuscript.RDS'))
+
+mod_frailty_Results_manuscript <- tidy(mod_frailty_manuscript, exponentiate = FALSE, parametric = TRUE) 
+
+saveRDS(mod_frailty_Results_manuscript, here('dataRDS', 'mod_frailty_Results_manuscript.RDS'))

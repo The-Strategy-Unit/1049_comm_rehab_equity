@@ -36,4 +36,18 @@ saveRDS(commContactsLsoa, file = here('dataRDS', 'commContactsLsoa.RDS'))
 
 
 
-rm(con_ncdr, script, comRehabEquity, script2, commContactsLsoa)
+
+script3 <- 'select AttendOrNot, Consultation_MediumUsed, COUNT(*) as atts from [NHSE_Sandbox_StrategyUnit].dbo.sw_CommRehabEqu_CommContacts group by AttendOrNot, Consultation_MediumUsed'
+
+commContactsCompleteness2vars <- dbGetQuery(con_ncdr, script3)
+
+saveRDS(commContactsCompleteness2vars, file = here('dataRDS', 'commContactsCompleteness2vars.RDS'))
+
+
+
+rm(con_ncdr, script, comRehabEquity, script2, commContactsLsoa, script3, commContactsCompleteness2vars)
+
+
+
+
+
